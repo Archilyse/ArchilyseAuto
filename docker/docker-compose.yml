@@ -1,0 +1,146 @@
+version: "2.3"
+
+services:
+  router:
+    image: ${GCR_REPO}/router
+    build:
+      context: ../
+      dockerfile: docker/nginx.Dockerfile
+      target: nginx
+    environment:
+      - API_HOST=http://api:8000
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+  api:
+    image: ${GCR_REPO}/api
+    build:
+      context: ../
+      dockerfile: docker/api.Dockerfile
+      args:
+        ML_IMAGES_BUCKET_CREDENTIALS_FILE: ${ML_IMAGES_BUCKET_CREDENTIALS_FILE}
+        API_BASE_IMAGE_VERSION: ${API_BASE_IMAGE_VERSION}
+        GCR_REPO: ${GCR_REPO}
+    restart: on-failure
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../app:/code/app
+      - ../predictors:/code/predictors
+    depends_on:
+      - prediction_worker
+  prediction_worker:
+    image: ${GCR_REPO}/prediction_worker
+    command: --worker
+    build:
+      context: ../
+      dockerfile: docker/prediction_worker.Dockerfile
+      args:
+        ML_IMAGES_BUCKET_CREDENTIALS_FILE: ${ML_IMAGES_BUCKET_CREDENTIALS_FILE}
+        PREDICTION_WORKER_BASE_IMAGE_VERSION: ${PREDICTION_WORKER_BASE_IMAGE_VERSION}
+        GCR_REPO: ${GCR_REPO}
+    env_file:
+      - .env
+    volumes:
+      - ../predictors:/code/predictors
+    depends_on:
+      - redis
+      - rabbitmq
+  prediction_gpu_worker:
+    image: ${GCR_REPO}/prediction_gpu_worker
+    command: --worker
+    build:
+      context: ../
+      dockerfile: docker/prediction_gpu_worker.Dockerfile
+      args:
+        ML_IMAGES_BUCKET_CREDENTIALS_FILE: ${ML_IMAGES_BUCKET_CREDENTIALS_FILE}
+    environment:
+      - DISPLAY=$DISPLAY
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    env_file:
+      - .env
+    volumes:
+      - ../predictors:/code/predictors
+    depends_on:
+      - redis
+      - rabbitmq
+  rabbitmq:
+    restart: "no"
+    image: "rabbitmq:3.11.9-management"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VIRTUAL_HOST}
+      RABBITMQ_NODENAME: node@rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+  redis:
+    image: "bitnami/redis:7.0.8"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+      - "${REDIS_DB}:${REDIS_DB}"
+  ################################################################################
+  ################################################################################
+  dvc_detectron:
+    image: ${GCR_REPO}/dvc_detectron:${DVC_IMAGE_VERSION}
+    build:
+      context: ../
+      dockerfile: docker/dvc_detectron.Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GCR_REPO: ${GCR_REPO}
+        GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+        GCP_REGION: ${GCP_REGION}
+        PYTHON_VERSION: ${PYTHON_VERSION}
+        DETECTRON_BASE_IMAGE_VERSION: ${DETECTRON_BASE_IMAGE_VERSION}
+    shm_size: "8gb"
+    privileged: true
+    #    runtime: nvidia
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    environment:
+      - DISPLAY=$DISPLAY
+      - NVIDIA_VISIBLE_DEVICES=all
+  darknet_yolo:
+    image: ${GCR_REPO}/darknet_yolo
+    build:
+      context: ../
+      dockerfile: docker/darknet_yolo.Dockerfile
+    restart: on-failure
+    privileged: true
+    environment:
+      - DISPLAY=$DISPLAY
+      - NVIDIA_VISIBLE_DEVICES=all
+  tensorboard:
+    build:
+      context: .
+      dockerfile: tensorboard.Dockerfile
+    restart: on-failure
+    privileged: true
+    ports:
+      - "6006:6006"

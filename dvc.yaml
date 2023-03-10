@@ -1,0 +1,120 @@
+stages:
+  dataset-deduplication:
+    cmd: python aurora/aurora/bin/swiss_dwellings/01_deduplicate.py
+      --similarity_threshold=${dataset.deduplication.threshold}
+      data/swiss-dwellings/images
+      data/blacklist_deduplication.csv
+    params:
+      - dataset.deduplication.threshold
+    deps:
+      - aurora/aurora/bin/swiss_dwellings/01_deduplicate.py
+    outs:
+      - data/blacklist_deduplication.csv
+  dataset-remove-orophans:
+    cmd: python aurora/aurora/bin/swiss_dwellings/02_remove_orphans.py
+      data/swiss-dwellings/
+      data/blacklist_cleanup.csv
+    deps:
+      - data/swiss-dwellings/geometries.csv
+      - data/swiss-dwellings/plans.csv
+      - aurora/aurora/bin/swiss_dwellings/02_remove_orphans.py
+    outs:
+      - data/blacklist_cleanup.csv
+  dataset-crop-and-scale:
+    cmd: python aurora/aurora/bin/swiss_dwellings/03_cleanup_scale_crop.py
+      --roi_scale=${dataset.cropping.roi_size}
+      --target_pixels_per_meter=${dataset.scaling.pixels_per_meter}
+      --as_grayscale=${dataset.normalization.as_grayscale}
+      -b data/blacklist_deduplication.csv
+      -b data/blacklist_cleanup.csv
+      -b data/blacklist_manual.csv
+      data/swiss-dwellings data/swiss-dwellings-clean
+    params:
+      - dataset.cropping.roi_size
+      - dataset.scaling.pixels_per_meter
+      - dataset.normalization.as_grayscale
+    deps:
+      - aurora/aurora/bin/swiss_dwellings/03_cleanup_scale_crop.py
+      - data/swiss-dwellings/plans.csv
+      - data/swiss-dwellings/geometries.csv
+      - data/blacklist_cleanup.csv
+      - data/blacklist_deduplication.csv
+      - data/blacklist_manual.csv
+    outs:
+      - data/swiss-dwellings-clean/images
+      - data/swiss-dwellings-clean/geometries.csv
+  yolo_gen_labels:
+    cmd: python aurora/aurora/bin/swiss_dwellings/yolo_gen_labels.py
+      -b data/blacklist_deduplication.csv
+      -b data/blacklist_cleanup.csv
+      -b data/blacklist_manual.csv
+      data/swiss-dwellings data/yolo_labels
+    deps:
+    - aurora/aurora/bin/swiss_dwellings/03_cleanup_scale_crop.py
+    - data/swiss-dwellings/plans.csv
+    - data/swiss-dwellings/geometries.csv
+    - data/blacklist_cleanup.csv
+    - data/blacklist_deduplication.csv
+    outs:
+      - data/yolo_labels
+  dataset-merge-geometries:
+    cmd: python aurora/aurora/bin/swiss_dwellings/04_merge_geometries.py
+      data/swiss-dwellings-clean/geometries.csv data/merged-geometries/geometries.csv
+    deps:
+      - data/swiss-dwellings-clean/geometries.csv
+      - aurora/aurora/bin/swiss_dwellings/04_merge_geometries.py
+    outs:
+      - data/merged-geometries/geometries.csv
+  dataset-export-coco:
+    cmd: python aurora/aurora/bin/coco/generate_coco_datasets.py
+      --version=${dataset.coco.version}
+      data/swiss-dwellings-clean/
+      data/merged-geometries/geometries.csv
+      data/coco/
+    params:
+      - dataset.coco.version
+    deps:
+      - aurora/aurora/bin/coco/generate_coco_datasets.py
+      - data/swiss-dwellings-clean/images
+      - data/merged-geometries/geometries.csv
+    outs:
+      - data/coco/
+  dataset-export-coco-tiled:
+    cmd: python aurora/aurora/bin/coco/generate_coco_datasets.py
+      --version=${dataset.coco.version}
+      --tiling_enabled=true
+      --tile_size=${dataset.coco.tile_size}
+      --tile_stride=${dataset.coco.tile_stride}
+      data/swiss-dwellings-clean/
+      data/merged-geometries/geometries.csv
+      data/coco-tiled/
+    params:
+      - dataset.coco.version
+      - dataset.coco.tile_size
+      - dataset.coco.tile_stride
+    deps:
+      - aurora/aurora/bin/coco/generate_coco_datasets.py
+      - data/swiss-dwellings-clean/images
+      - data/merged-geometries/geometries.csv
+    outs:
+      - data/coco-tiled/
+  train-detectron:
+    cmd: python3.8 detectron/training_job.py && cp -f output/metrics* data/results/ && cp -f output/model_final.pth data/results/model_final.pth && cp -R -f output/plots data/results/plots
+    params: 
+    - instance_segmentation
+    deps:
+      - detectron/training_job.py
+      - data/coco
+    outs:
+      - data/results/model_final.pth
+      - data/results/plots
+    metrics:
+    - data/results/metrics_dvc.json:
+        cache: false
+  train-deeplab:
+    cmd: OMP_NUM_THREADS=1 python3.8 segmentation/train.py
+    params: 
+    - semantic_segmentation
+    deps:
+    - segmentation/train.py
+    - data/coco 

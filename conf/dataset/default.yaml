@@ -1,0 +1,12 @@
+deduplication:
+  threshold: 0.20
+cropping:
+  roi_size: 1.1
+scaling:
+  pixels_per_meter: 40
+normalization:
+  as_grayscale: True
+coco:
+  tile_size: 512
+  tile_stride: 448
+  version: 1.1.3

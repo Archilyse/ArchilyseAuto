@@ -1,0 +1,19 @@
+name: Python Static Analysis
+on:
+  push:
+    branches-ignore:
+      - '!main'
+
+jobs:
+  lint:
+    name: Code Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          cache: 'pip'
+      - run: pip install -r ci_requirements.txt
+      - name: static_analysis
+        shell: bash
+        run: make static_analysis

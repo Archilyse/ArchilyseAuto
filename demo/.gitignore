@@ -1,0 +1,17 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+
+node_modules
+dist
+
+# Editor directories and files
+.DS_Store
+
+
+test-results
+playwright-report
+playwright/.cache/
+ui/.env

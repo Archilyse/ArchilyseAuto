@@ -1,0 +1,7 @@
+[core]
+    remote = storage
+[hydra]
+    enabled = True
+['remote "storage"']
+    url = gs://archilyse-aurora-data/data
+

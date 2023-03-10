@@ -1,0 +1,5 @@
+defaults:
+ - dataset: default
+ - mlflow: default
+ - instance_segmentation: default
+ - semantic_segmentation: remote

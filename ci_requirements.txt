@@ -1,0 +1,10 @@
+black[d]>=23,<24
+bandit[toml]>=1.7.4,<2
+flake8>=6.0.0,<7
+pyproject-flake8>=6.0.0.post1,<7
+isort>=5.12, <6
+flake8-isort>=6.0.0,<7
+flake8-black>=0.3.6,<0.4
+flake8-bugbear>=23.1.20,<24
+flake8-print>=5.0.0,<6
+mypy>=1,<2

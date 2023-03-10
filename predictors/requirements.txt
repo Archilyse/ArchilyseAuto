@@ -1,0 +1,11 @@
+numpy==1.24.2
+opencv-python-headless==4.7.0.72
+sentry-sdk==1.16.0
+Shapely==2.0.1
+scikit-image==0.20.0
+segmentation-models-pytorch==0.3.2
+torch==1.10.1
+torchvision==0.11.2
+google-cloud-storage==2.7.0
+celery[redis]==5.2.7
+validators==0.20.0

@@ -1,0 +1,9 @@
+defaults:
+ - detectron2: remote
+
+DATASET_DIR: "data/coco"
+THING_CLASSES:
+  - TOILET
+  - BATHTUB
+  - SINK
+  - SHOWER

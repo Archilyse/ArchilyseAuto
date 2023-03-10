@@ -1,0 +1,16 @@
+[project]
+name = "aurora"
+version = "1.0.0"
+description = "automatic inference of building models from floor plans"
+authors = [
+    {name="Michael Franzen", email="franzen@archilyse.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8.10"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+ 
+[build-system]
+requires = ["setuptools ~= 65.5.0", "wheel"]

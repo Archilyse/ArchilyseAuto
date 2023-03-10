@@ -1,0 +1,8 @@
+data/labels
+data/obj
+data/test.txt
+data/train.txt
+yolov4.conv.137
+yolo-roi-latest.weights
+predictions.jpg
+bad.list

@@ -1,0 +1,145 @@
+dataset:
+  deduplication:
+    threshold: 0.2
+  cropping:
+    roi_size: 1.1
+  scaling:
+    pixels_per_meter: 40
+  normalization:
+    as_grayscale: true
+  coco:
+    tile_size: 512
+    tile_stride: 448
+    version: 1.1.3
+mlflow:
+  EXPERIMENT_NAME: /Detectron/InstanceSegmentation
+  RUN_NAME: test-run
+instance_segmentation:
+  detectron2:
+    OUTPUT_DIR: output
+    MODEL:
+      META_ARCHITECTURE: GeneralizedRCNN
+      BACKBONE:
+        NAME: build_resnet_fpn_backbone
+      RESNETS:
+        OUT_FEATURES:
+        - res2
+        - res3
+        - res4
+        - res5
+        DEPTH: 50
+      FPN:
+        IN_FEATURES:
+        - res2
+        - res3
+        - res4
+        - res5
+      ANCHOR_GENERATOR:
+        SIZES:
+        - - 32
+        - - 64
+        - - 128
+        - - 256
+        - - 512
+        ASPECT_RATIOS:
+        - - 0.5
+          - 1.0
+          - 2.0
+      RPN:
+        IN_FEATURES:
+        - p2
+        - p3
+        - p4
+        - p5
+        - p6
+        PRE_NMS_TOPK_TRAIN: 2000
+        PRE_NMS_TOPK_TEST: 1000
+        POST_NMS_TOPK_TRAIN: 1000
+        POST_NMS_TOPK_TEST: 1000
+      ROI_HEADS:
+        NAME: StandardROIHeads
+        IN_FEATURES:
+        - p2
+        - p3
+        - p4
+        - p5
+        BATCH_SIZE_PER_IMAGE: 512
+        NUM_CLASSES: 11
+        SCORE_THRESH_TEST: 0.5
+      ROI_BOX_HEAD:
+        NAME: FastRCNNConvFCHead
+        NUM_FC: 2
+        POOLER_RESOLUTION: 7
+      ROI_MASK_HEAD:
+        NAME: MaskRCNNConvUpsampleHead
+        NUM_CONV: 4
+        POOLER_RESOLUTION: 14
+      WEIGHTS: detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl
+      MASK_ON: true
+    DATALOADER:
+      NUM_WORKERS: 4
+      SAMPLER_TRAIN: RepeatFactorTrainingSampler
+      REPEAT_THRESHOLD: 0.01
+    DATASETS:
+      TRAIN: ("floorplans_train",)
+      TEST: ("floorplans_test",)
+    SOLVER:
+      IMS_PER_BATCH: 1
+      BASE_LR: 0.005
+      MAX_ITER: 10000
+      STEPS: []
+      GAMMA: 0.5
+      CHECKPOINT_PERIOD: 2000
+    INPUT:
+      MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+      MAX_SIZE_TRAIN: 1333
+      MIN_SIZE_TEST: 800
+      MAX_SIZE_TEST: 1333
+      MASK_FORMAT: bitmask
+    TEST:
+      EVAL_PERIOD: 2000
+      DETECTIONS_PER_IMAGE: 200
+    VERSION: 2
+  DATASET_DIR: data/coco
+  THING_CLASSES:
+  - TOILET
+  - BATHTUB
+  - SINK
+  - SHOWER
+semantic_segmentation:
+  MODEL:
+    CLASSES:
+    - SPACE
+    - WALL_UNION_EX_OPENINGS
+    - RAILING
+    - WINDOW
+    - DOOR
+    BACKGROUND_DIM: true
+    PAD_SIZE: 512
+    CROP_ENABLED: true
+    CROP_SIZE: 512
+    RESIZE_ENABLED: false
+    MAX_SIZE: 512
+    SCALING_ENABLED: true
+    SCALING_LIMITS:
+    - 0.5
+    - 1
+    ACTIVATION: softmax2d
+    LOSS_FUNCTION: miou
+    TVERSKY_PARAMS:
+    - 0.7
+    - 0.3
+    - 0.75
+    ENCODER: resnet101
+    ENCODER_WEIGHTS: imagenet
+    IMAGE_MEAN: null
+    IMAGE_STD: null
+  SOLVER:
+    EPOCHS: 60
+    BATCH_SIZE: 8
+    LEARNING_RATE: 0.0001
+  DATALOADER:
+    NUM_WORKERS: 8
+  DATASET:
+    PATH: data/coco
+  OUTPUT_DIR: output

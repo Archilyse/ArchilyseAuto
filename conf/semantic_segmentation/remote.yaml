@@ -1,0 +1,26 @@
+MODEL:
+  CLASSES: ["SPACE", "WALL_UNION_EX_OPENINGS", "RAILING", "WINDOW", "DOOR"]
+  BACKGROUND_DIM: True
+  PAD_SIZE: 512
+  CROP_ENABLED: True
+  CROP_SIZE: 512
+  RESIZE_ENABLED: False
+  MAX_SIZE: 512
+  SCALING_ENABLED: True
+  SCALING_LIMITS: [0.5, 1] # (0.5, 2)
+  ACTIVATION: "softmax2d"
+  LOSS_FUNCTION: "miou"
+  TVERSKY_PARAMS: [0.7, 0.3, 0.75]
+  ENCODER: "resnet101"
+  ENCODER_WEIGHTS: "imagenet"
+  IMAGE_MEAN: null # use imagenet mean
+  IMAGE_STD: null # use imagenet mean
+SOLVER:
+  EPOCHS: 60
+  BATCH_SIZE: 8
+  LEARNING_RATE: 0.0001
+DATALOADER:
+  NUM_WORKERS: 8
+DATASET:
+  PATH: "data/coco"
+OUTPUT_DIR: "output"

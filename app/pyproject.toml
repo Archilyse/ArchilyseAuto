@@ -1,0 +1,22 @@
+[project]
+name = "app"
+version = "1.0.0"
+description = "api"
+authors = [
+    {name="Jan Hendrik"},
+    {name="Michael Franzen"},
+    {name="Yarilo Villanueva"},
+    {name="Luis Gonzalez"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+ 
+[build-system]
+requires = ["setuptools ~= 65.5.0", "wheel"]
+
+[tool.setuptools]
+py-modules = []

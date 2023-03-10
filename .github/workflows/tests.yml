@@ -1,0 +1,103 @@
+name: E2E & FE unit tests
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCR_REPO: gcr.io/${{ secrets.PROJECT_ID }}
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCLOUD_PUSH_SERVICE_KEY }}
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+      - name: Download ml models
+        run: |
+          make update_resources
+
+      - name: Set env variables
+        run: |
+          export API_BASE_IMAGE_VERSION=$(< docker/.env grep API_BASE_IMAGE_VERSION | cut -d "=" -f 2)
+          echo API_BASE_IMAGE_VERSION=$API_BASE_IMAGE_VERSION >> $GITHUB_ENV
+          
+          export PREDICTION_WORKER_BASE_IMAGE_VERSION=$(< docker/.env grep PREDICTION_WORKER_BASE_IMAGE_VERSION | cut -d "=" -f 2)
+          echo PREDICTION_WORKER_BASE_IMAGE_VERSION=$PREDICTION_WORKER_BASE_IMAGE_VERSION >> $GITHUB_ENV
+          
+          echo ROUTER_IMAGE_NAME=$GCR_REPO/router:${{ github.event.number }} >> $GITHUB_ENV
+          echo API_IMAGE_NAME=$GCR_REPO/api:${{ github.event.number }} >> $GITHUB_ENV
+          echo PREDICTION_WORKER_IMAGE_NAME=$GCR_REPO/prediction_worker:${{ github.event.number }} >> $GITHUB_ENV
+
+          export ML_IMAGES_BUCKET_CREDENTIALS_FILE=$(< docker/.env grep ML_IMAGES_BUCKET_CREDENTIALS_FILE | cut -d "=" -f 2)
+          echo ML_IMAGES_BUCKET_CREDENTIALS_FILE=$ML_IMAGES_BUCKET_CREDENTIALS_FILE >> $GITHUB_ENV
+      - name: Retrieve service key secret and decode it to a file
+        env:
+          SERVICE_ACCOUNT_B64: ${{ secrets.ML_IMAGES_SA_BASE64 }}
+        run: |
+          mkdir -p secrets
+          echo $SERVICE_ACCOUNT_B64 | base64 --decode > ${{ github.workspace }}${{env.ML_IMAGES_BUCKET_CREDENTIALS_FILE}}
+      - name: Retrieve .env key secret and decode it to a file in demo/ui
+        env:
+          ENV_B64: ${{ secrets.DEMO_UI_ENV_BASE64 }}
+        run: |
+          echo $ENV_B64 | base64 --decode > ${{ github.workspace }}/demo/ui/.env
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GCR
+        uses: docker/login-action@v2
+        with:
+          registry: gcr.io
+          username: _json_key
+          password: ${{ secrets.GCLOUD_PUSH_SERVICE_KEY }}
+      - name: Pull/build api BASE image
+        uses: docker/build-push-action@v4
+        with:
+          file: docker/api_base.Dockerfile
+          pull: true
+          push: true
+          tags: ${{env.GCR_REPO}}/api_base:${{env.API_BASE_IMAGE_VERSION}},${{env.GCR_REPO}}/api_base:latest
+          cache-from: type=registry,ref=${{env.GCR_REPO}}/api_base:latest
+          cache-to: type=inline
+      - name: Pull/build prediction worker BASE image
+        uses: docker/build-push-action@v4
+        with:
+          file: docker/prediction_worker_base.Dockerfile
+          pull: true
+          push: true
+          tags: ${{env.GCR_REPO}}/prediction_worker_base:${{env.PREDICTION_WORKER_BASE_IMAGE_VERSION}},${{env.GCR_REPO}}/prediction_worker_base:latest
+          cache-from: type=registry,ref=${{env.GCR_REPO}}/prediction_worker_base:latest
+          cache-to: type=inline
+      - name: Build api/router/prediction_worker images
+        run: make docker_build
+      - name: Run docker images
+        run: make docker_up_daemonize_multi_workers
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+          cache-dependency-path: demo/ui/package-lock.json
+      - name: Install dependencies
+        run: cd demo/ui && npm install && npx playwright install --with-deps
+      - name: Run E2E & FE Unit tests
+        run: cd demo/ui && npm run test
+      - name: Push images (only when tests pass)
+        run: |
+          docker tag $GCR_REPO/router ${{env.ROUTER_IMAGE_NAME}}
+          docker tag $GCR_REPO/api ${{env.API_IMAGE_NAME}}
+          docker tag $GCR_REPO/prediction_worker ${{env.PREDICTION_WORKER_IMAGE_NAME}}
+          docker push ${{env.ROUTER_IMAGE_NAME}}
+          docker push ${{env.API_IMAGE_NAME}}
+          docker push ${{env.PREDICTION_WORKER_IMAGE_NAME}}

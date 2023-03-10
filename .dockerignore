@@ -1,0 +1,12 @@
+.dvc/
+.*_cache
+__pycache__
+data/
+
+darknet_yolo/data/obj
+!.dvc/config
+!data/*.dvc
+.venv
+.venv-detectron
+.venv-38
+detectron2_repo

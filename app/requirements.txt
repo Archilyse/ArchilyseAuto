@@ -1,0 +1,11 @@
+fastapi==0.92.0
+numpy==1.24.2
+python-multipart==0.0.6
+uvicorn==0.20.0
+opencv-python-headless==4.7.0.72
+sentry-sdk[fastapi]==1.16.0
+Shapely==2.0.1
+matplotlib==3.7.0
+gcloud-aio-storage==8.0.0
+celery[redis]==5.2.7
+validators==0.20.0

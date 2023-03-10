@@ -1,0 +1,45 @@
+{
+  "name": "ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=/demo-assets/",
+    "preview": "vite preview",
+    "test": "npm run unittest && npm run e2etest",
+    "e2etest": "playwright test tests/e2e",
+    "unittest": "vitest run tests/unit",
+    "unittest:watch": "vitest watch tests/unit",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write src/"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.29.2",
+    "@sveltejs/vite-plugin-svelte": "^1.4.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/svelte": "^3.2.2",
+    "@tsconfig/svelte": "^3.0.0",
+    "jsdom": "^21.1.0",
+    "prettier": "^2.8.1",
+    "prettier-plugin-svelte": "^2.9.0",
+    "svelte": "^3.52.0",
+    "svelte-check": "^2.9.2",
+    "svelte-preprocess": "^4.10.7",
+    "tslib": "^2.4.0",
+    "typescript": "^4.6.4",
+    "vite": "^3.2.3",
+    "vitest": "^0.28.5"
+  },
+  "dependencies": {
+    "@auth0/auth0-spa-js": "^2.0.2",
+    "@sentry/integrations": "^7.36.0",
+    "@sentry/svelte": "^7.36.0",
+    "axios": "^1.2.1",
+    "chart.js": "^4.2.1",
+    "dotenv": "^16.0.3",
+    "lucide-svelte": "^0.104.0",
+    "svelte-chartjs": "^3.1.2",
+    "svelte-file-dropzone": "^1.0.0"
+  }
+}

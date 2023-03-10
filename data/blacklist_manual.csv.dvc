@@ -1,0 +1,4 @@
+outs:
+- md5: 66a3cec42c63734b6d9af7a4460024b3
+  size: 431
+  path: blacklist_manual.csv
