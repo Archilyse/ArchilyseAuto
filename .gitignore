@@ -168,5 +168,4 @@ outputs
 *.ipynb
 
 profiling/prof
-/resources
 /secrets
