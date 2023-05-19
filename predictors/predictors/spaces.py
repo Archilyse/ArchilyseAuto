@@ -22,7 +22,7 @@ class SpacePredictor(BasePredictor):
     def config():
         import torch
 
-        from predictors.tasks.logging import logger
+        from predictors.tasks.utils.logging import logger
 
         cfg = get_cfg()
         cfg.merge_from_file(

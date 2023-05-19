@@ -17,6 +17,7 @@ class FloorplanModel(pl.LightningModule):
     def __init__(
         self,
         class_names,
+        ignore_class_indexes,
         learning_rate,
         loss_function,
         encoder,
@@ -74,17 +75,27 @@ class FloorplanModel(pl.LightningModule):
                 beta=beta,
                 gamma=gamma,
                 from_logits=activation is None,
+                classes=[
+                    c for c in range(len(class_names)) if c not in ignore_class_indexes
+                ],
             )
         elif loss_function == "dice":
             self.loss_fn = smp.losses.DiceLoss(
                 smp.losses.MULTILABEL_MODE,
                 from_logits=activation is None,
+                classes=[
+                    c for c in range(len(class_names)) if c not in ignore_class_indexes
+                ],
             )
         elif loss_function == "cross_entropy":
             self.loss_fn = smp.losses.SoftCrossEntropyLoss(smp.losses.MULTILABEL_MODE)
         elif loss_function == "miou":
             self.loss_fn = smp.losses.JaccardLoss(
-                smp.losses.MULTILABEL_MODE, from_logits=activation is None
+                smp.losses.MULTILABEL_MODE,
+                from_logits=activation is None,
+                classes=[
+                    c for c in range(len(class_names)) if c not in ignore_class_indexes
+                ],
             )
         else:
             raise ValueError("Unknown loss function")
@@ -189,10 +200,16 @@ class FloorplanModel(pl.LightningModule):
                 self.mlflow_initialized = True
 
                 for k, v in self.config.items():
-                    mlflow.log_param(k, v)
+                    try:
+                        mlflow.log_param(k, v)
+                    except Exception:
+                        continue
 
             for k, v in metrics.items():
-                mlflow.log_metric(key=k, value=v, step=self.current_epoch)
+                try:
+                    mlflow.log_metric(key=k, value=v, step=self.current_epoch)
+                except Exception:
+                    continue
 
             if stage == "valid" and self.current_epoch % 3 == 0:
                 plots_path = self.output_directory.joinpath(
@@ -203,11 +220,17 @@ class FloorplanModel(pl.LightningModule):
                     dataset=self.validation_dataset,
                     output_directory=plots_path,
                 )
-                mlflow.log_artifacts(plots_path.as_posix(), plots_path.name)
+                try:
+                    mlflow.log_artifacts(plots_path.as_posix(), plots_path.name)
+                except Exception:
+                    pass
 
                 model_path = self.output_directory.joinpath("model.pth").as_posix()
                 torch.save(self.model, model_path)
-                mlflow.log_artifact(model_path, "model")
+                try:
+                    mlflow.log_artifact(model_path, "model")
+                except Exception:
+                    pass
 
     def training_step(self, batch, batch_idx):
         return self.shared_step(batch, "train")

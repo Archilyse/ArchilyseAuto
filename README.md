@@ -30,7 +30,9 @@ Repository for the automatic inference of models from raw floor plans
 #### Resources needed
    1. You'll need a file named as the set variable _ML_IMAGES_BUCKET_CREDENTIALS_FILE_ in `docker/.env`.
       This file should contain the credentials for the service account that has access to the images bucket.
-   2. Download necessary resources:
+   2. You'll need the file _microsoft-identity-association.json_ placed in `demo/ui/` (ask a fellow developer for this file).
+      This is needed to be able to authenticate with Auth0. Otherwise, build will fail.
+   3. Download necessary resources:
       ````
       make update_resources
       ````
@@ -66,7 +68,7 @@ Repository for the automatic inference of models from raw floor plans
       ````
 #### Authentication
 
-   Authentication is set up using [Auth0](https://auth0.com/)
+   Authentication is set up with [Auth0](https://auth0.com/).
    In order for authentication to work, you need to create a copy of `.env.sample` file 
    located in the `demo/ui` directory into `.env` and fill with proper values. 
 
@@ -131,5 +133,14 @@ Then we can run:
 ```
 cat demo/ui/.env | base64 -w 0 > temp.base_64
 gh secret set DEMO_UI_ENV_BASE64 < temp.base_64
+rm temp.base_64
+```
+#### MICROSOFT_IDENTITY_BASE64:
+
+Similar as in the previous step. We need to have the `microsoft-identity-association.json` file located in the `demo/ui` directory. 
+Then we can run: 
+```
+cat demo/ui/microsoft-identity-association.json | base64 -w 0 > temp.base_64
+gh secret set MICROSOFT_IDENTITY_BASE64 < temp.base_64
 rm temp.base_64
 ```

@@ -11,6 +11,7 @@ COPY ./darknet_yolo/cfg/yolo-obj.cfg /code/resources/yolo-roi.cfg
 
 WORKDIR /code
 
+COPY ./common/ /code/common/
 COPY ./predictors/ /code/predictors/
 RUN pip install --no-cache-dir --upgrade -e predictors
 

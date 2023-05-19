@@ -14,6 +14,8 @@ class ClassLabel(Enum):
     SPACE = 9
     BACKGROUND = 10
     FOREGROUND = 11
+    STAIRS = 12
+    ELEVATOR = 13
 
 
 COLORS = {
@@ -28,4 +30,6 @@ COLORS = {
     ClassLabel.KITCHEN: (255, 255, 0),
     ClassLabel.SPACE: (250, 250, 210),
     ClassLabel.BACKGROUND: (0, 0, 0),
+    ClassLabel.ELEVATOR: (73, 52, 0),
+    ClassLabel.STAIRS: (145, 209, 126),
 }

@@ -11,6 +11,7 @@ class CocoLabel(Enum):
     WALL = auto()
     RAILING = auto()
     COLUMN = auto()
+    WALL_UNION = auto()
     WALL_UNION_EX_OPENINGS = auto()
     RAILING_UNION = auto()
 
@@ -32,7 +33,11 @@ class CocoLabel(Enum):
     TOILET_UNION = auto()
     SHOWER_UNION = auto()
     STAIRS = auto()  # noqa:E800
+    STAIRS_UNION = auto()  # noqa:E800
     ELEVATOR = auto()  # noqa:E800
+    ELEVATOR_UNION = auto()  # noqa:E800
+    WINDOW_UNION = auto()
+    DOOR_UNION = auto()
 
     # # Undefined
     IGNORE = auto()

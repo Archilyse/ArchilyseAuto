@@ -36,7 +36,7 @@ update_repo() {
 }
 
 run_training_detectron() {
-    dvc pull dataset-export-coco dataset-export-coco-tiled
+    dvc pull dataset-export-coco
     if python3.8 -c "import torch; print(torch.cuda.get_device_name(0));"; then
         COMMAND="dvc exp run -s --pull -v -n '$EXPERIMENT_NAME' $REMAINING_ARGS train-detectron"
         eval ${COMMAND[@]}

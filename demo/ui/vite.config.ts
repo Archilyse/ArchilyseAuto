@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
         input: {
           main: resolve(__dirname, 'index.html'),
           502: resolve(__dirname, '502.html'),
+          maintenance: resolve(__dirname, 'maintenance.html'),
           tos: resolve(__dirname, 'tos.html'),
         },
       },

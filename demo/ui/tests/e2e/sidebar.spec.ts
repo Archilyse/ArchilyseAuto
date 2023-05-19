@@ -83,6 +83,6 @@ test.describe('Test the Sidebar Links', () => {
         await page.getByText(/Log out/).click();
 
         // Confirm that no plan is loaded yet
-        await expect(page.getByText(/Log in with your account to upload plans/)).toBeVisible();
+        await expect(page.getByText(/Login/)).toBeVisible();
     });
 });

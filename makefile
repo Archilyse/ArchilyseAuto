@@ -5,7 +5,7 @@
 PYTHON_VERSION=$(shell cat .python-version)
 COMMIT_HASH := $(shell git rev-parse HEAD)
 
-DOCKER_ENV_ARGS := $(shell < .env xargs)
+DOCKER_ENV_ARGS := $(shell < .env xargs) $(shell < docker/.env xargs)
 DOCKER_DETECTRON := GCP_PROJECT_ID=$(GCP_PROJECT_ID) \
 	GCP_REGION=$(GCP_REGION) \
 	PYTHON_VERSION=$(PYTHON_VERSION) \
@@ -17,7 +17,7 @@ DOCKER_DETECTRON := GCP_PROJECT_ID=$(GCP_PROJECT_ID) \
 DOCKER_DEV := $(DOCKER_DETECTRON) COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose --project-directory docker -f docker/docker-compose.yml
 DOCKER_DEV_BUILD_PARALLEL := $(DOCKER_DEV) build
 
-FOLDERS_TO_FORMAT := aurora/ detectron/ app/ segmentation/ predictors/
+FOLDERS_TO_FORMAT := aurora/ app/ segmentation/ predictors/ tests/
 
 format:
 	black $(FOLDERS_TO_FORMAT)
@@ -25,11 +25,11 @@ format:
 	pflake8 $(FOLDERS_TO_FORMAT)
 	mypy $(FOLDERS_TO_FORMAT)
 
-format_demo_ui:
+format_fe:
 	cd demo/ui && npm run format
 
 ## NOTE: Tests require node 16.18.0+ to work
-tests_demo_ui:
+tests_fe:
 	cd demo/ui && npm run test
 
 static_analysis:
@@ -37,6 +37,8 @@ static_analysis:
 	mypy $(FOLDERS_TO_FORMAT)
 	bandit -r --severity-level medium -q $(FOLDERS_TO_FORMAT)
 
+fe_static_analysis:
+	cd demo/ui && npm run format:check && npm run lint:check
 
 docker_down:
 	$(DOCKER_DEV) down -v --remove-orphans
@@ -112,11 +114,17 @@ docker_build_base: docker_build_base_api docker_build_base_prediction_worker
 docker_build:
 	$(DOCKER_DEV_BUILD_PARALLEL) api router prediction_worker
 
+docker_build_push_gpu:
+	$(DOCKER_DEV_BUILD_PARALLEL) prediction_gpu_worker && \
+	read -p "Enter tag (pr number): " tag; \
+    docker tag gcr.io/aurora-223611/prediction_gpu_worker gcr.io/aurora-223611/prediction_gpu_worker:$$tag; \
+    docker push gcr.io/aurora-223611/prediction_gpu_worker:$$tag;
+
 docker_up:
 	$(DOCKER_DEV) up --remove-orphans --abort-on-container-exit api router prediction_worker
 
 docker_up_multi_workers:
-	$(DOCKER_DEV) up --remove-orphans --scale prediction_worker=2 router prediction_worker
+	$(DOCKER_DEV) up --remove-orphans --scale prediction_worker=3 api router prediction_worker
 
 docker_run:
 	$(DOCKER_DEV) run api
@@ -139,11 +147,13 @@ experiment_detectron:
 	$(DOCKER_DETECTRON) python bin/remote_train.py \
 		-M "detectron" \
 		-c $(COMMIT_HASH) \
-		-n "test-v1.1.9" \
+		-n "icons-custom-hook-101" \
 		-m "n1-highmem-4" \
 		-a "NVIDIA_TESLA_T4" \
 		-N 1 \
-		-S "conf/instance_segmentation/detectron2/remote.yaml:SOLVER.MAX_ITER=1000"
+		-S "conf/instance_segmentation/detectron2/remote.yaml:SOLVER.BASE_LR=0.025" \
+		-S "conf/instance_segmentation/detectron2/remote.yaml:SOLVER.MAX_ITER=20000" \
+		-S "conf/instance_segmentation/detectron2/remote.yaml:SOLVER.STEPS=[2000,4000,6000,8000,10000,12000,14000,16000,18000]"
 
 
 experiment_deeplab:
@@ -182,8 +192,19 @@ profile_code:
 update_resources:
 	mkdir -p resources && \
 	gsutil -m cp gs://archilyse-aurora/temp-model/icons_model_final.pth \
+	gs://archilyse-aurora/temp-model/icons_model_final_2.pth \
     gs://archilyse_darknet_yolo/6k-iter-a100/yolo-roi-latest.weights \
     gs://archilyse-aurora/temp-model/walls_model_2023_03_02_v2.pth \
     gs://archilyse-aurora/temp-model/spaces_model_final.pth \
     resources
 	mv resources/walls_model_2023_03_02_v2.pth resources/walls_model_latest.pth
+
+
+# *********** TESTS ******************
+# ************************************
+
+redis_up:  ## Start up redis
+	$(DOCKER_DEV) up --remove-orphans -d redis
+
+tests_locally: redis_up
+	$(DOCKER_ENV_ARGS) REDIS_HOST=localhost pytest tests/ --maxfail=30 -s --lf || true

@@ -1,0 +1,2 @@
+class InputImageException(Exception):
+    pass

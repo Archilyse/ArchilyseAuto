@@ -21,9 +21,11 @@ class COCOSegementationDataset:
     ):
         self.coco = COCO(coco_json_path)
         self.image_dir = image_dir
-        self.image_ids = self.coco.getImgIds()
-        self.category_names = category_names
-        self.category_ids = [self.coco.getCatIds(catNms=[c])[0] for c in category_names]
+        self.image_ids = np.array(self.coco.getImgIds())
+        self.category_names = np.array(category_names)
+        self.category_ids = np.array(
+            [self.coco.getCatIds(catNms=[c])[0] for c in category_names]
+        )
         self.augmentation = augmentation
         self.preprocessing = preprocessing
         self.add_background_dim = add_background_dim

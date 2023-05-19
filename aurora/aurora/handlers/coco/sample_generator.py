@@ -2,7 +2,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import DefaultDict, List
+from typing import DefaultDict, List, Optional, Set
 
 from PIL import Image
 from shapely.affinity import translate
@@ -26,6 +26,8 @@ class SampleGenerator:
         image_width: int,
         image_height: int,
         geometries: DefaultDict[str, List[Polygon]],
+        rle_labels: Optional[Set[str]] = None,
+        polygon_labels: Optional[Set[str]] = None,
     ) -> List[Sample]:
         detections = [
             InstanceGenerator.generate_instance(
@@ -33,9 +35,13 @@ class SampleGenerator:
                 label=class_label,
                 image_width=image_width,
                 image_height=image_height,
+                force_rle=rle_labels is not None and class_label in rle_labels,
+                force_polygon=polygon_labels is not None
+                and class_label in polygon_labels,
             )
             for class_label, class_geometries in geometries.items()
             for geometry in class_geometries
+            if geometry.is_valid and not geometry.is_empty
         ]
 
         if detections:
@@ -60,6 +66,8 @@ class SampleGenerator:
         tile_size: int,
         tile_stride: int,
         tile_output_path: Path,
+        rle_labels: Optional[Set[str]] = None,
+        polygon_labels: Optional[Set[str]] = None,
     ) -> List[Sample]:
         image = Image.open(image_file_path)
         samples = []
@@ -103,6 +111,8 @@ class SampleGenerator:
                 image_width=tile_image.width,
                 image_height=tile_image.height,
                 geometries=tile_geometries,
+                rle_labels=rle_labels,
+                polygon_labels=polygon_labels,
             )
 
         return samples

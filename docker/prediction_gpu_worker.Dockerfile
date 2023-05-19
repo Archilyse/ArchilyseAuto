@@ -31,7 +31,7 @@ RUN wget https://bootstrap.pypa.io/get-pip.py && \
 
 # install dependencies
 # See https://pytorch.org/ for other options if you use a different version of CUDA
-RUN pip install setuptools==59.5.0 tensorboard cmake onnx  # cmake from apt-get is too old
+RUN pip install setuptools==59.5.0 cmake onnx  # cmake from apt-get is too old
 RUN pip install torch==1.10.1 torchvision==0.11.2 -f https://download.pytorch.org/whl/cu111/torch_stable.html
 
 RUN pip install 'git+https://github.com/facebookresearch/fvcore'
@@ -70,6 +70,7 @@ COPY ./predictors/requirements.txt /code/predictors/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/predictors/requirements.txt
 
 COPY ./predictors/ /code/predictors/
+COPY ./common/ /code/common/
 RUN pip install --no-cache-dir --upgrade -e predictors
 
 COPY docker/entrypoints/worker_entrypoint.sh /entrypoint.sh

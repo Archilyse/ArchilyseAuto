@@ -1,15 +1,86 @@
 """Rescale and crop images / geometries, apply blacklists and make images black/white"""
+import warnings
 from pathlib import Path
 from typing import List, Union
 
 import click
 import pandas as pd
 from PIL import Image
+from PIL.Image import DecompressionBombWarning
 from shapely import wkt
-from shapely.affinity import scale, translate
+from shapely.affinity import rotate, scale, translate
 from shapely.geometry import box
 from shapely.ops import unary_union
 from tqdm.contrib.concurrent import process_map
+
+warnings.filterwarnings("ignore", category=DecompressionBombWarning, module="PIL")
+
+
+def masterplan_transform_required(plan):
+    return (
+        plan.masterplan_scale_factor != 1.0
+        or plan.masterplan_shift_y != 0.0
+        or plan.masterplan_shift_x != 0.0
+        or plan.masterplan_rotation != 0.0
+    )
+
+
+def transform_geometry(geometry, plan, plan_image, target_scale):
+    if masterplan_transform_required(plan):
+        actual_plan_scale = plan.pixels_per_meter / plan.masterplan_scale_factor
+        geometry = rotate(
+            translate(
+                scale(
+                    geometry,
+                    xfact=actual_plan_scale,
+                    yfact=-actual_plan_scale,
+                    origin=(0, 0),
+                ),
+                yoff=plan_image.height
+                + plan.masterplan_shift_y / plan.masterplan_scale_factor,
+                xoff=-plan.masterplan_shift_x / plan.masterplan_scale_factor,
+            ),
+            angle=-plan.masterplan_rotation,
+            origin=(plan_image.width / 2, plan_image.height / 2),
+        )
+        if target_scale is None:
+            return geometry
+
+        target_scale_factor = target_scale / actual_plan_scale
+        return scale(
+            geometry,
+            xfact=target_scale_factor,
+            yfact=target_scale_factor,
+            origin=(0, 0),
+        )
+
+    # NOTE to avoid changing images which were already processed we have to do the target scaling in this method
+    # even though it would be preferable to do the scaling in a separate method together with the image.
+    if target_scale is None:
+        target_scale = plan.pixels_per_meter
+    target_scale_factor = target_scale / plan.pixels_per_meter
+    return translate(
+        scale(geometry, xfact=target_scale, yfact=-target_scale, origin=(0, 0)),
+        yoff=int(plan_image.height * target_scale_factor),
+    )
+
+
+def roi_crop(image, geometries, roi_scale):
+    roi = scale(
+        box(*unary_union(geometries.geometry).bounds),
+        roi_scale,
+        roi_scale,
+        origin="center",
+    )
+    geometries["geometry"] = [
+        translate(
+            geometry,
+            -roi.bounds[0],
+            -roi.bounds[1],
+        )
+        for geometry in geometries.geometry
+    ]
+    return image.crop(roi.bounds), geometries
 
 
 def crop_image_and_geometries(
@@ -22,62 +93,48 @@ def crop_image_and_geometries(
     target_pixels_per_meter: Union[float, None],
     as_grayscale: bool,
 ):
-    pixels_per_meter = plan_dataframe[
-        plan_dataframe.plan_id == plan_id
-    ].pixels_per_meter.iloc[0]
-    plan_geometries_dataframe = geometries_dataframe[
-        (geometries_dataframe.plan_id == plan_id)
+    plan = plan_dataframe[plan_dataframe.plan_id == plan_id].iloc[0]
+    plan_geometries = geometries_dataframe[(geometries_dataframe.plan_id == plan_id)][
+        [
+            "site_id",
+            "plan_id",
+            "entity_type",
+            "entity_subtype",
+            "geometry",
+        ]
+    ].drop_duplicates()
+    plan_image = Image.open(image_input_folder.joinpath(f"{plan_id}.jpg"))
+
+    plan_geometries["geometry"] = [
+        transform_geometry(
+            geometry=wkt.loads(geom_wkt),
+            plan=plan,
+            plan_image=plan_image,
+            target_scale=target_pixels_per_meter,
+        )
+        for geom_wkt in plan_geometries.geometry
     ]
 
-    plan_image = Image.open(image_input_folder.joinpath(f"{plan_id}.jpg"))
     if as_grayscale:
         plan_image = plan_image.convert("L")
 
     if target_pixels_per_meter is not None:
-        image_scale = target_pixels_per_meter / pixels_per_meter
+        actual_plan_scale = plan.pixels_per_meter / plan.masterplan_scale_factor
+        target_scale_factor = target_pixels_per_meter / actual_plan_scale
         plan_image = plan_image.resize(
-            (int(image_scale * plan_image.width), int(image_scale * plan_image.height))
-        )
-        pixels_per_meter = target_pixels_per_meter
-
-    def geometry_transform(geometry):
-        return translate(
-            scale(
-                geometry, xfact=pixels_per_meter, yfact=-pixels_per_meter, origin=(0, 0)
-            ),
-            yoff=plan_image.height,
-        )
-
-    if roi_scale:
-        roi = scale(
-            box(
-                *unary_union(
-                    [
-                        geometry_transform(wkt.loads(row.geometry))
-                        for _, row in plan_geometries_dataframe.iterrows()
-                    ]
-                ).bounds
-            ),
-            roi_scale,
-            roi_scale,
-            origin="center",
-        )
-    else:
-        roi = ((0, 0), (plan_image.width, plan_image.height))
-
-    for i, row in plan_geometries_dataframe.iterrows():
-        plan_geometries_dataframe.loc[i, "geometry"] = wkt.dumps(
-            translate(
-                geometry_transform(wkt.loads(row.geometry)),
-                -roi.bounds[0],
-                -roi.bounds[1],
+            (
+                int(target_scale_factor * plan_image.width),
+                int(target_scale_factor * plan_image.height),
             )
         )
 
-    image_cropped = plan_image.crop(roi.bounds)
-    image_cropped.save(image_output_folder.joinpath(f"{plan_id}.jpg"))
+    if roi_scale:
+        plan_image, plan_geometries = roi_crop(
+            image=plan_image, geometries=plan_geometries, roi_scale=roi_scale
+        )
 
-    return plan_geometries_dataframe
+    plan_image.save(image_output_folder.joinpath(f"{plan_id}.jpg"))
+    return plan_geometries
 
 
 @click.command()
@@ -138,6 +195,8 @@ def rescale_and_crop_images(
                 [roi_scale] * len(plan_ids),
                 [target_pixels_per_meter] * len(plan_ids),
                 [as_grayscale] * len(plan_ids),
+                max_workers=4,
+                chunksize=8,
             )
             if row is not None
         ],

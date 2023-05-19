@@ -63,8 +63,8 @@ instance_segmentation:
         - p3
         - p4
         - p5
-        BATCH_SIZE_PER_IMAGE: 512
-        NUM_CLASSES: 11
+        BATCH_SIZE_PER_IMAGE: 128
+        NUM_CLASSES: 8
         SCORE_THRESH_TEST: 0.5
       ROI_BOX_HEAD:
         NAME: FastRCNNConvFCHead
@@ -84,11 +84,10 @@ instance_segmentation:
       TRAIN: ("floorplans_train",)
       TEST: ("floorplans_test",)
     SOLVER:
-      IMS_PER_BATCH: 1
-      BASE_LR: 0.005
-      MAX_ITER: 10000
+      IMS_PER_BATCH: 8
+      BASE_LR: 0.025
+      MAX_ITER: 50000
       STEPS: []
-      GAMMA: 0.5
       CHECKPOINT_PERIOD: 2000
     INPUT:
       MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
@@ -101,11 +100,16 @@ instance_segmentation:
       DETECTIONS_PER_IMAGE: 200
     VERSION: 2
   DATASET_DIR: data/coco
+  TILE_SIZES: []
   THING_CLASSES:
-  - TOILET
-  - BATHTUB
-  - SINK
-  - SHOWER
+  - TOILET_UNION
+  - BATHTUB_UNION
+  - SINK_UNION
+  - SHOWER_UNION
+  - STAIRS_UNION
+  - ELEVATOR_UNION
+  - WINDOW_UNION
+  - DOOR_UNION
 semantic_segmentation:
   MODEL:
     CLASSES:

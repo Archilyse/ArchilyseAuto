@@ -30,6 +30,7 @@ def union_geometry_types(
     entity_subtypes: Union[Set[str], None] = None,
     buffer_in_pixels: float = 0,
     exclude_subtypes: Union[Set[str], None] = None,
+    output_only_one_geometry: bool = False,
 ):
     buffer_styles = dict(join_style=JOIN_STYLE.mitre, cap_style=CAP_STYLE.square)
 
@@ -58,16 +59,22 @@ def union_geometry_types(
         if isinstance(geoms_union, Polygon):
             geoms_union = MultiPolygon([geoms_union])
 
-        geometries_out += [
-            (site_id, plan_id, wkt.dumps(geom), output_type, output_type)
-            for geom in geoms_union.geoms
-        ]
+        if not output_only_one_geometry:
+            geometries_out += [
+                (site_id, plan_id, wkt.dumps(geom), output_type, output_type)
+                for geom in geoms_union.geoms
+            ]
+        else:
+            # Output the single multipolygon for all elements
+            geometries_out += [
+                (site_id, plan_id, wkt.dumps(geoms_union), output_type, output_type)
+            ]
 
     return geometries_out
 
 
 def walls_union_difference_openings(
-    geometries: pd.DataFrame,
+    geometries: pd.DataFrame, output_only_one_geometry: bool = False
 ):
     walls_union = union_geometry_types(
         geometries=geometries,
@@ -90,10 +97,22 @@ def walls_union_difference_openings(
         if isinstance(walls_ex_openings, Polygon):
             walls_ex_openings = MultiPolygon([walls_ex_openings])
 
-        geometries_out += [
-            (site_id, plan_id, wkt.dumps(wall), output_type, output_type)
-            for wall in walls_ex_openings.geoms
-        ]
+        if not output_only_one_geometry:
+            geometries_out += [
+                (site_id, plan_id, wkt.dumps(wall), output_type, output_type)
+                for wall in walls_ex_openings.geoms
+            ]
+        else:
+            # Output the single multipolygon for all elements
+            geometries_out += [
+                (
+                    site_id,
+                    plan_id,
+                    wkt.dumps(unary_union(walls_ex_openings)),
+                    output_type,
+                    output_type,
+                )
+            ]
 
     return geometries_out
 
@@ -114,15 +133,48 @@ def merge_areas(
         buffer_in_pixels=AREA_UNION_BUFFER_PX,
         exclude_subtypes=set(),
     )
-    geometries_merged += walls_union_difference_openings(geometries=geometries_in)
+    geometries_merged += walls_union_difference_openings(
+        geometries=geometries_in, output_only_one_geometry=True
+    )
     geometries_merged += union_geometry_types(
         geometries=geometries_in,
         entity_types={"separator"},
         entity_subtypes={"RAILING"},
         output_type="RAILING_UNION",
         buffer_in_pixels=AREA_UNION_BUFFER_PX,
+        output_only_one_geometry=True,
     )
-    for entity_subtype in ["TOILET", "SINK", "SHOWER", "KITCHEN", "BATHTUB"]:
+    geometries_merged += union_geometry_types(
+        geometries=geometries_in,
+        entity_types={"separator"},
+        entity_subtypes={"WALL"},
+        output_type="WALL_UNION",
+        buffer_in_pixels=AREA_UNION_BUFFER_PX,
+        output_only_one_geometry=True,
+    )
+    geometries_merged += union_geometry_types(
+        geometries=geometries_in,
+        entity_types={"opening"},
+        entity_subtypes={"DOOR", "ENTRANCE_DOOR"},
+        output_type="DOOR_UNION",
+        buffer_in_pixels=AREA_UNION_BUFFER_PX,
+    )
+    geometries_merged += union_geometry_types(
+        geometries=geometries_in,
+        entity_types={"opening"},
+        entity_subtypes={"WINDOW"},
+        output_type="WINDOW_UNION",
+        buffer_in_pixels=AREA_UNION_BUFFER_PX,
+    )
+    for entity_subtype in [
+        "TOILET",
+        "SINK",
+        "SHOWER",
+        "KITCHEN",
+        "BATHTUB",
+        "ELEVATOR",
+        "STAIRS",
+    ]:
         geometries_merged += union_geometry_types(
             geometries=geometries_in,
             entity_types={"feature"},

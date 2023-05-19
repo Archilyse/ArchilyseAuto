@@ -20,17 +20,21 @@ const assertInitialInfo = async (page) => {
 };
 
 test.describe('Main layout visibility', () => {
-    test('If the user is not authenticated, it will see the info & prompt to autenticate', async ({ page }) => {
+    test('If the user is not authenticated, it will see the info & login button in the sidebar', async ({ page }) => {
         await assertInitialInfo(page);
-        await expect(page.getByText(/Log in with your account to upload plans/)).toBeVisible();
+        
+        await expect(page.getByRole('button', {name: 'Login'})).toBeVisible();
+        await expect(page.getByRole('button', {name: 'Log out'})).not.toBeVisible();
     });
-    test('If the user is authenticated, it will see info & prompt to upload', async ({ page }) => {
+    test('If the user is authenticated, it will see info & logout in the sidebar', async ({ page }) => {
         await login(page);
-        await assertInitialInfo(page);
-        await expect(page.getByText(/Drop a plan here or click to upload/)).not.toBeVisible();
 
+        await assertInitialInfo(page);
+
+        await expect(page.getByRole('button', {name: 'Login'})).not.toBeVisible();
+        await expect(page.getByRole('button', {name: 'Log out'})).toBeVisible();
     });
-    test.skip('On uploading a plan only the plan image is shown', async ({ page, browserName }) => {
+    test('On uploading a plan only the plan image is shown', async ({ page, browserName }) => {
         await login(page);
         await uploadFile(page, browserName, SAMPLE_PLAN);
 

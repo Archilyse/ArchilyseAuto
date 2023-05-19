@@ -18,6 +18,7 @@ RUN chown -R nobody /etc/nginx /src
 RUN mkdir -m 755 /var/log/nginx
 
 COPY --from=js_dependencies /dep/dist /src/ui/demo/dist
+COPY demo/ui/microsoft-identity-association.json /src/ui/microsoft-identity-association.json
 
 WORKDIR /src/
 

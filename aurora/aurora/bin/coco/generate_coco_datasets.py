@@ -17,6 +17,18 @@ from aurora.handlers.coco.sample_generator import Sample, SampleGenerator
 
 random.seed(42)
 
+FORCED_RLE_REP = {"WALL_UNION", "RAILING_UNION", "WALL_UNION_EX_OPENINGS"}
+FORCED_POLYGON_REP = {
+    "TOILET_UNION",
+    "SINK_UNION",
+    "WINDOW_UNION",
+    "DOOR_UNION",
+    "BATHTUB_UNION",
+    "SHOWER_UNION",
+    "STAIRS_UNION",
+    "ELEVATOR_UNION",
+}
+
 
 def generate_samples(
     image_input_folder: Path,
@@ -50,6 +62,8 @@ def generate_samples(
             tile_size=tile_size,
             tile_stride=tile_stride,
             tile_output_path=image_output_folder,
+            rle_labels=FORCED_RLE_REP,
+            polygon_labels=FORCED_POLYGON_REP,
         )
 
     return SampleGenerator.get_samples(
@@ -57,6 +71,8 @@ def generate_samples(
         image_width=image_width,
         image_height=image_height,
         geometries=geometries,
+        rle_labels=FORCED_RLE_REP,
+        polygon_labels=FORCED_POLYGON_REP,
     )
 
 

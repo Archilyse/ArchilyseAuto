@@ -65,7 +65,7 @@ class WallPredictor(BasePredictor):
     TORCH_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     def __init__(self, model_path: Optional[Path] = None):
-        from predictors.tasks.logging import logger
+        from predictors.tasks.utils.logging import logger
 
         if model_path is None:
             model_path = self.TORCH_MODEL_PATH

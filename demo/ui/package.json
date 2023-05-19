@@ -11,7 +11,8 @@
     "e2etest": "playwright test tests/e2e",
     "unittest": "vitest run tests/unit",
     "unittest:watch": "vitest watch tests/unit",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "format:check": "prettier --check src/",
+    "lint:check": "svelte-check --threshold warning --tsconfig ./tsconfig.json",
     "format": "prettier --write src/"
   },
   "devDependencies": {

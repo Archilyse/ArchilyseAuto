@@ -1,0 +1,17 @@
+import os
+
+N_VAL_LOSS = 100
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+THING_COLORS = {
+    "TOILET_UNION": (0, 255, 255),
+    "BATHTUB_UNION": (255, 0, 255),
+    "SINK_UNION": (0, 128, 0),
+    "SHOWER_UNION": (192, 126, 24),
+    "SPACE": (192, 126, 24),
+    "STAIRS": (192, 126, 24),
+    "ELEVATOR": (192, 126, 24),
+    "STAIRS_UNION": (192, 126, 24),
+    "ELEVATOR_UNION": (192, 126, 24),
+    "DOOR_UNION": (0, 255, 0),
+    "WINDOW_UNION": (255, 0, 0),
+}

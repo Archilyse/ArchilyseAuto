@@ -1,46 +1,46 @@
 :root {
-  --primary-bg-color: #343541;
-  --secondary-bg-color: #202123;
-  --text-color: white;
-  --plan-area-width-taken: 80%;
+    --primary-bg-color: #343541;
+    --secondary-bg-color: #202123;
+    --text-color: white;
+    --plan-area-width-taken: 80%;
 }
 
 html,
 body {
-  margin: 0;
-  height: 100%;
-  width: 100%;
-  font-family: "Barlow", sans-serif;
-  background-color: var(--primary-bg-color);
-  color: var(--text-color);
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    font-family: "Barlow", sans-serif;
+    background-color: var(--primary-bg-color);
+    color: var(--text-color);
 }
 
 span {
-  font-family: "Barlow", sans-serif;
+    font-family: "Barlow", sans-serif;
 }
 
 /* Button styles adapted from slam theme  (slam/ui/common/src/theme.css) */
 button.primary,
 button.secondary {
-  width: 161px;
-  height: 48px;
-  font-family: "Barlow", sans-serif;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 1rem;
-  line-height: 19px;
-  text-align: center;
-  cursor: pointer;
+    width: 161px;
+    height: 48px;
+    font-family: "Barlow", sans-serif;
+    font-style: normal;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 19px;
+    text-align: center;
+    cursor: pointer;
 }
 
 button.primary {
-  background-color: #434c50;
-  box-shadow: 0px 4px 7px rgba(0, 0, 0, 0.16);
-  border-radius: 2px;
-  border: 0px;
-  color: var(--text-color);
-  margin-right: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    background-color: #434c50;
+    box-shadow: 0px 4px 7px rgba(0, 0, 0, 0.16);
+    border-radius: 2px;
+    border: 0px;
+    color: var(--text-color);
+    margin-right: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

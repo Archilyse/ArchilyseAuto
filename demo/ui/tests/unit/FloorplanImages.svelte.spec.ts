@@ -55,7 +55,7 @@ describe('FloorplanImages component', () => {
             rerender(props);
             assertImg(screen, MOCK_BACKGROUND_SRC, 'Processed background', { blurred: true });
         });
-        test('Renders walls & icons normally when request finishes', () => {
+        test('Renders walls, icons and eventually a download button normally when request finishes', () => {
             processedWalls.set(MOCK_WALLS_SRC);
             processedIcons.set(MOCK_ICONS_SRC);
             processedSpaces.set(MOCK_SPACES_SRC);
@@ -69,6 +69,7 @@ describe('FloorplanImages component', () => {
             assertImg(screen, MOCK_ICONS_SRC, 'Processed features', { blurred: false });
             assertImg(screen, MOCK_SPACES_SRC, 'Processed spaces', { blurred: false });
             assertImg(screen, MOCK_BACKGROUND_SRC, 'Processed background', { blurred: false });
+            expect(screen.getByText('Download result')).toBeInTheDocument();
         });
     });
 

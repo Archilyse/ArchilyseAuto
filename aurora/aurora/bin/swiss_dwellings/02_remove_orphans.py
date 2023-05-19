@@ -87,6 +87,8 @@ def cleanup(input_folder: Path, output_path: Path):
             [geometries_dataframe] * len(all_plan_ids),
             [plan_dataframe] * len(all_plan_ids),
             all_plan_ids,
+            max_workers=16,
+            chunksize=8,
         ),
         columns=["plan_id", "reason"],
     )

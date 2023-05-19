@@ -143,6 +143,7 @@ def run(cfg: DictConfig) -> None:
     )
     pl_model = FloorplanModel(
         class_names=class_names,
+        ignore_class_indexes=config.MODEL.IGNORE_IN_LOSS,
         learning_rate=config.SOLVER.LEARNING_RATE,
         loss_function=config.MODEL.LOSS_FUNCTION,
         encoder=config.MODEL.ENCODER,

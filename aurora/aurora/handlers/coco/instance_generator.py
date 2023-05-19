@@ -20,7 +20,13 @@ class Instance:
 class InstanceGenerator:
     @classmethod
     def generate_instance(
-        cls, geometry: Polygon, label: str, image_width: int, image_height: int
+        cls,
+        geometry: Polygon,
+        label: str,
+        image_width: int,
+        image_height: int,
+        force_rle: bool = False,
+        force_polygon: bool = False,
     ) -> Instance:
         iscrowd = 0
 
@@ -29,7 +35,11 @@ class InstanceGenerator:
             bbox_absolute=cls.get_bounding_box(geometry=geometry),
             iscrowd=iscrowd,
             segmentation=cls.get_segmentation(
-                geometry=geometry, image_width=image_width, image_height=image_height
+                geometry=geometry,
+                image_width=image_width,
+                image_height=image_height,
+                force_rle=force_rle,
+                force_polygon=force_polygon,
             ),
             area=geometry.area,
         )
@@ -46,9 +56,14 @@ class InstanceGenerator:
 
     @classmethod
     def get_segmentation(
-        cls, geometry: Polygon, image_width: int, image_height: int
+        cls,
+        geometry: Polygon,
+        image_width: int,
+        image_height: int,
+        force_rle: bool = False,
+        force_polygon: bool = False,
     ) -> Union[List[float], dict]:
-        if geometry.interiors:
+        if force_rle or (force_polygon is False and geometry.interiors):
             binary_mask = cls.get_mask(
                 geometry=geometry,
                 image_width=image_width,

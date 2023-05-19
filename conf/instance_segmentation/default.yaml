@@ -2,8 +2,13 @@ defaults:
  - detectron2: remote
 
 DATASET_DIR: "data/coco"
+TILE_SIZES: []
 THING_CLASSES:
-  - TOILET
-  - BATHTUB
-  - SINK
-  - SHOWER
+  - TOILET_UNION
+  - BATHTUB_UNION
+  - SINK_UNION
+  - SHOWER_UNION
+  - STAIRS_UNION
+  - ELEVATOR_UNION
+  - WINDOW_UNION
+  - DOOR_UNION

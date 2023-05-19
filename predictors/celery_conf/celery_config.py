@@ -38,7 +38,7 @@ redis_conn_config = {
 result_backend = f"redis://:{redis_conn_config['password']}@{redis_conn_config['host']}:{redis_conn_config['port']}/{redis_conn_config['db']}"
 
 result_serializer = "json"
-result_expires = 86400 * 5  # 5 days in seconds
+result_expires = 86400 * 1  # 1 day in seconds
 result_extended = True
 
 worker_prefetch_multiplier = 1
@@ -47,13 +47,16 @@ worker_concurrency = int(os.environ.get("WORKER_CONCURRENCY", 1))
 worker_send_task_events = True
 worker_redirect_stdouts = False
 worker_cancel_long_running_tasks_on_connection_loss = True  # Important change in celery 5.x that is causing problems with duplicated tasks if False
-worker_proc_alive_timeout = 60 * 5  # 5 minutes in seconds
+worker_proc_alive_timeout = (
+    60 * 5
+)  # 5 minutes in seconds (used for the long init process of loading the ML models in memory)
 
 task_send_sent_event = True
 task_ignore_result = False
 task_serializer = "json"
 task_acks_late = strtobool(os.environ.get("CELERY_ACKS_LATE", "True"))
 task_always_eager = strtobool(os.environ.get("CELERY_EAGER", "False"))
+task_store_eager_result = False
 task_eager_propagates = True  # if eager == True then this applies
 task_track_started = True
 task_time_limit = 86400 * 2  # 48 hours in seconds

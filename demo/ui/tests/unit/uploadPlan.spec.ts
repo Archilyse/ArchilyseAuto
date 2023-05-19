@@ -1,10 +1,11 @@
 import { test, expect, describe, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import request from '../../src/providers/request';
-import { processedIcons, processedWalls, processedSpaces, wallTimer, iconTimer } from '../../src/stores';
+import { processedIcons, processedWalls, processedSpaces, wallTimer, iconTimer, spacesTimer, backgroundTimer, statisticsTimer, processedBackground, processedStats } from '../../src/stores';
 import uploadPlan from '../../src/utils/uploadPlan.js';
+import { RequestPredictionResponse } from '../../src/types';
+import TaskStatus from '../../src/types/TaskStatus';
 
-// @TODO: Extend this tests to test the background fetch that happens inside uploadPlan
 const MOCK_FILE = new File(
     ['A payaso mock'],
     'actually this should be an image but it does not matter for the mock.txt'
@@ -15,30 +16,44 @@ vi.stubGlobal('URL', { createObjectURL: () => FAKE_IMG_URL });
 
 const mockResultsReady = () => {
     vi.spyOn(request, 'get').mockImplementation(async (url, options: any): Promise<any> => {
-        return { data: 'fakeimg', headers: { 'content-type': 'image/svg' } };
+        return { data: 'fakeimg', status: 200 };
     });
 };
 
-const mockUploadImageResponse = () => {
-    vi.spyOn(request, 'post').mockImplementation(async (url, data, options: any): Promise<any> => {
-        return { data: { wall_task: { id: 1, status: '' }, icon_task: { id: 2, status: 'ola' }, spaces_task: { id: 3, status: 'merhaba' } } };
+const mockUploadImage = () => {
+    vi.spyOn(request, 'put').mockImplementation(async (url, options: any): Promise<any> => {
+        return { status: 200 };
     });
+}
+
+const mockRequestPrediction = () => {
+    const mockResponse = async (url:string, data: any, options: any): Promise<{data: RequestPredictionResponse}> => {
+        return { data: { wall_task: { id: '1', status: TaskStatus.STARTED, }, icon_task: { id: '2', status: TaskStatus.STARTED },
+        spaces_task: { id: '3', status: TaskStatus.PENDING }, background_task: { id: '4', status: TaskStatus.PENDING }, statistics_task: { id: '5', status: TaskStatus.STARTED } } };
+    };
+    // @ts-ignore
+    vi.spyOn(request, 'post').mockImplementation(mockResponse); // Ignore so TS doesn't complain we don't respond all axios (status, config...) response
 };
 
 const assertSVGImage = (expectedURL: string | null) => {
     expect(get(processedIcons)).toBe(expectedURL);
     expect(get(processedWalls)).toBe(expectedURL);
     expect(get(processedSpaces)).toBe(expectedURL);
+    expect(get(processedBackground)).toBe(expectedURL);
 };
 
 const assertTimersAreNull = () => {
     expect(get(wallTimer)).toBe(null);
     expect(get(iconTimer)).toBe(null);
+    expect(get(spacesTimer)).toBe(null);
+    expect(get(backgroundTimer)).toBe(null);
+    expect(get(statisticsTimer)).toBe(null);
 };
 const resetSVGImage = () => {
     processedIcons.set(null);
     processedWalls.set(null);
     processedSpaces.set(null);
+    processedBackground.set(null);
 };
 
 describe('uploadPlan', () => {
@@ -46,7 +61,8 @@ describe('uploadPlan', () => {
 
     beforeEach(() => {
         resetSVGImage();
-        mockUploadImageResponse();
+        mockUploadImage();
+        mockRequestPrediction();
 
         mockActiveTimers = 0;
         vi.spyOn(global, 'setInterval').mockImplementation((fn): any => {
@@ -63,12 +79,15 @@ describe('uploadPlan', () => {
         vi.restoreAllMocks();
     });
 
-    test('Uploading a plans successfully set icons & walls image', async () => {
+    test('Uploading a plans successfully sets: Icons, walls, spaces, background & stats', async () => {
         mockResultsReady();
 
         assertSVGImage(null);
         await uploadPlan(MOCK_FILE);
         assertSVGImage(FAKE_IMG_URL);
+
+        // stats will the value of the request.get mock above, so for simplicity we assert that it has been set (not initial value, null)
+        expect(get(processedStats)).not.toBeNull();
     });
 
     test('After receiving results, timer are reset', async () => {
@@ -81,10 +100,7 @@ describe('uploadPlan', () => {
 
     test('If there is an error, timers are reset', async () => {
         vi.spyOn(request, 'get').mockImplementation(async (url, options: any): Promise<any> => {
-            return {
-                data: 'this will throw an error as it is not what fetchData expects',
-                headers: { 'content-type': 'application/json' },
-            };
+            throw new Error('something went wrong');
         });
 
         assertTimersAreNull();
@@ -103,4 +119,5 @@ describe('uploadPlan', () => {
         //All timers should be cancelled properly, otherwise it means there are timers still polling from the first request (which was not "waited")
         expect(mockActiveTimers).toBe(0);
     });
+
 });
